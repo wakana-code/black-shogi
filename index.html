@@ -1,0 +1,1302 @@
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>株式会社ブラック将棋 〜AI部長との五五将棋〜</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    background: #111;
+    color: #eee;
+  }
+  header {
+    text-align: center;
+    padding: 14px 10px 8px;
+    background: linear-gradient(#1d1d1d, #111);
+    border-bottom: 1px solid #333;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    letter-spacing: .12em;
+    color: #e33;
+  }
+  .sub {
+    margin: 4px 0 0;
+    font-size: .8rem;
+    color: #999;
+  }
+  #app {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: center;
+    padding: 16px;
+  }
+  #left { width: 420px; max-width: 100%; }
+  #right { width: 380px; max-width: 100%; }
+  #aiPanel {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: #1c1c1c;
+    border: 1px solid #3a2222;
+    border-radius: 10px;
+    padding: 10px;
+    min-height: 100px;
+  }
+  #avatar { font-size: 46px; line-height: 1; }
+  .ainame { font-weight: bold; font-size: .9rem; color: #f66; }
+  #aiStatus { font-weight: normal; color: #8c8; font-size: .75rem; margin-left: 6px; }
+  #bubble { margin-top: 6px; font-size: .9rem; line-height: 1.55; color: #ddd; }
+  .handLabel { font-size: .75rem; color: #888; margin: 8px 0 3px; }
+  .hand {
+    min-height: 46px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px;
+    background: #1a1a1a;
+    border: 1px dashed #333;
+    border-radius: 6px;
+  }
+  .hp {
+    background: #f4dfae;
+    color: #111;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    font-family: serif;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .hp small { font-size: .7rem; color: #555; }
+  .hp.sel { border-color: #e33; background: #f3e27a; }
+  .hp.hint { border-color: #3af; }
+  .hp.gote { cursor: default; opacity: .85; }
+  #boardWrap { margin-top: 8px; }
+  #colLabels {
+    display: grid;
+    grid-template-columns: repeat(5, 64px);
+    text-align: center;
+    font-size: .8rem;
+    color: #999;
+    padding-left: 4px;
+  }
+  #boardRow { display: flex; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(5, 64px);
+    grid-template-rows: repeat(5, 64px);
+    background: #d9b26f;
+    border: 4px solid #6b4a1e;
+  }
+  .cell {
+    border: 1px solid #8a6630;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .cell.last { background: #e8c684; }
+  .cell.sel { background: #f3e27a; }
+  .cell.target::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(200, 30, 30, .55);
+    position: absolute;
+  }
+  .cell.hint { box-shadow: inset 0 0 0 4px #3af; }
+  .piece {
+    width: 50px;
+    height: 56px;
+    background: #f6e3b4;
+    clip-path: polygon(50% 0, 88% 16%, 100% 100%, 0 100%, 12% 16%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 8px;
+    font-size: 26px;
+    font-weight: bold;
+    color: #111;
+    font-family: serif;
+  }
+  .piece.gote { transform: rotate(180deg); }
+  .piece.promoted { color: #c00; }
+  #rowLabels {
+    display: grid;
+    grid-template-rows: repeat(5, 64px);
+    align-items: center;
+    font-size: .8rem;
+    color: #999;
+    padding-left: 6px;
+    margin-top: 4px;
+  }
+  #turnInfo { margin-top: 8px; font-size: .85rem; color: #ccc; }
+  #controls {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  button.ctl {
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: .8rem;
+    cursor: pointer;
+  }
+  button.ctl:hover { background: #3a2a2a; border-color: #a33; }
+  select {
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: .8rem;
+  }
+  .box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .box h3 { margin: 0 0 8px; font-size: .85rem; color: #f88; }
+  .barOuter {
+    height: 16px;
+    background: #400;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #555;
+  }
+  .barInner { height: 100%; background: linear-gradient(90deg, #2a7, #5d9); transition: width .5s; }
+  .dig { background: linear-gradient(90deg, #a70, #fc3); }
+  .statLine { font-size: .78rem; color: #aaa; margin: 4px 0 8px; }
+  #kifu, #log {
+    max-height: 170px;
+    overflow-y: auto;
+    font-size: .8rem;
+    line-height: 1.6;
+    color: #ccc;
+  }
+  #log div { border-bottom: 1px dotted #333; padding: 3px 0; }
+  details { font-size: .78rem; color: #aaa; line-height: 1.6; }
+  footer { text-align: center; font-size: .7rem; color: #666; padding: 10px 0 20px; }
+  #modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #modal.hidden { display: none; }
+  #modalBox {
+    background: #f8f1df;
+    color: #222;
+    width: 360px;
+    max-width: 92%;
+    border-radius: 8px;
+    padding: 20px;
+    border: 6px double #8a1a1a;
+    font-family: serif;
+    text-align: center;
+  }
+  #modalText { white-space: pre-line; line-height: 1.7; }
+  #modalBtns { margin-top: 14px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  #modalBtns button {
+    background: #8a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>株式会社ブラック将棋</h1>
+  <p class="sub">〜AI部長 KUROGANE-9000 と五五将棋〜 ／ 当社は駒たちの自主的なサービス残業によって運営されています</p>
+</header>
+
+<div id="app">
+  <section id="left">
+    <div id="aiPanel">
+      <div id="avatar">😎</div>
+      <div>
+        <div class="ainame">AI部長 KUROGANE-9000 <span id="aiStatus">待機中</span></div>
+        <div id="bubble">…</div>
+      </div>
+    </div>
+
+    <div class="handLabel">AI部長の待機社員（引き抜き済み）</div>
+    <div id="handG" class="hand"></div>
+
+    <div id="boardWrap">
+      <div id="colLabels"></div>
+      <div id="boardRow">
+        <div id="board"></div>
+        <div id="rowLabels"></div>
+      </div>
+    </div>
+
+    <div class="handLabel">あなたの待機社員（無給）</div>
+    <div id="handS" class="hand"></div>
+
+    <div id="turnInfo"></div>
+
+    <div id="controls">
+      <select id="diff">
+        <option value="settai">接待モード（煽りは本気）</option>
+        <option value="honki" selected>本気</option>
+        <option value="otona">大人げない</option>
+      </select>
+      <button class="ctl" id="btnNew">新しい試合（再就職）</button>
+      <button class="ctl" id="btnUndo">待った（尊厳 -15）</button>
+      <button class="ctl" id="btnHint">ヒント（尊厳 -10）</button>
+      <button class="ctl" id="btnBribe">賄賂を渡す（尊厳 -20）</button>
+      <button class="ctl" id="btnSorry">謝罪を要求する</button>
+      <button class="ctl" id="btnResign">投了（推奨）</button>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="box">
+      <h3>あなたの勝率（AI調べ・忖度なし）</h3>
+      <div class="barOuter"><div id="winBar" class="barInner" style="width:50%"></div></div>
+      <div class="statLine" id="winText">50.0%</div>
+
+      <h3>あなたの尊厳</h3>
+      <div class="barOuter"><div id="digBar" class="barInner dig" style="width:100%"></div></div>
+      <div class="statLine" id="digText">100 / 100</div>
+
+      <div class="statLine" id="engineInfo">AI部長の読み：まだ本気を出していません</div>
+      <div class="statLine" id="bribeInfo">累計賄賂：¥0（経費では落ちません）</div>
+    </div>
+
+    <div class="box">
+      <h3>棋譜（永久保存・削除不可）</h3>
+      <div id="kifu"></div>
+    </div>
+
+    <div class="box">
+      <h3>AI部長の発言ログ（パワハラ相談窓口：なし）</h3>
+      <div id="log"></div>
+    </div>
+
+    <div class="box">
+      <details>
+        <summary>五五将棋のルール（就業規則）</summary>
+        5×5の盤で指す将棋です。駒は玉・金・銀・角・飛・歩が各1枚ずつあります。<br>
+        敵陣は相手側の最奥の1段だけです。そこに入るか、そこから出るときに成れます。<br>
+        歩が最奥段に入ったら必ず成ります。<br>
+        二歩・打ち歩詰めは禁止です。取った駒は持ち駒として打てます（転職）。<br>
+        合法手がなくなった側の負けです。200手に達したら引き分けとします（双方過労）。
+      </details>
+    </div>
+  </section>
+</div>
+
+<footer>※本アプリで失われた尊厳は補償の対象外です。※AI部長の発言は個人の見解であり、当社の見解でもあります。</footer>
+
+<div id="modal" class="hidden">
+  <div id="modalBox">
+    <div id="modalText"></div>
+    <div id="modalBtns"></div>
+  </div>
+</div>
+
+<script>
+// ===================== エンジン定義 =====================
+const P = 1, S = 2, G = 3, B = 4, R = 5, K = 6;
+const USER = 1, AI = -1;
+const MATE = 100000;
+
+const PROMOTE = [0, 7, 8, 0, 9, 10, 0, 0, 0, 0, 0];
+const BASE = [0, 1, 2, 3, 4, 5, 6, 1, 2, 4, 5];
+const NAME = ['', '歩', '銀', '金', '角', '飛', '玉', 'と', '全', '馬', '龍'];
+const VAL = [0, 100, 520, 580, 700, 820, 0, 600, 580, 1000, 1150];
+const HANDVAL = [0, 130, 560, 620, 760, 880];
+
+const D8 = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+const GOLD = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0]];
+const DIAG = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+const ORTH = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const STEPS = [null, [[-1, 0]], [[-1, -1], [-1, 0], [-1, 1], [1, -1], [1, 1]], GOLD, null, null, D8, GOLD, GOLD, ORTH, DIAG];
+const SLIDES = [null, null, null, null, DIAG, ORTH, null, null, null, DIAG, ORTH];
+
+let board = new Array(25).fill(0);
+let hand = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
+
+function sideOf(v) { return v > 0 ? 1 : -1; }
+
+function pushMove(mv, from, to, t, cap, fr, tr, lastRow) {
+  if (PROMOTE[t] && (fr === lastRow || tr === lastRow)) {
+    mv.push({ from, to, piece: t, promo: true, drop: 0, cap });
+    if (t === P && tr === lastRow) return;
+  }
+  mv.push({ from, to, piece: t, promo: false, drop: 0, cap });
+}
+
+function pseudoMoves(side, capOnly) {
+  const mv = [];
+  const lastRow = side === 1 ? 0 : 4;
+  for (let s = 0; s < 25; s++) {
+    const v = board[s];
+    if (v === 0 || sideOf(v) !== side) continue;
+    const t = v < 0 ? -v : v;
+    const r = (s / 5) | 0, c = s % 5;
+    const st = STEPS[t];
+    if (st) {
+      for (const d of st) {
+        const rr = r + d[0] * side, cc = c + d[1];
+        if (rr < 0 || rr > 4 || cc < 0 || cc > 4) continue;
+        const to = rr * 5 + cc, tv = board[to];
+        if (tv !== 0 && sideOf(tv) === side) continue;
+        if (capOnly && tv === 0) continue;
+        pushMove(mv, s, to, t, tv, r, rr, lastRow);
+      }
+    }
+    const sl = SLIDES[t];
+    if (sl) {
+      for (const d of sl) {
+        let rr = r + d[0] * side, cc = c + d[1];
+        while (rr >= 0 && rr <= 4 && cc >= 0 && cc <= 4) {
+          const to = rr * 5 + cc, tv = board[to];
+          if (tv !== 0 && sideOf(tv) === side) break;
+          if (!capOnly || tv !== 0) pushMove(mv, s, to, t, tv, r, rr, lastRow);
+          if (tv !== 0) break;
+          rr += d[0] * side;
+          cc += d[1];
+        }
+      }
+    }
+  }
+  if (!capOnly) {
+    const hi = side === 1 ? 0 : 1;
+    const pawnCols = [false, false, false, false, false];
+    for (let s = 0; s < 25; s++) {
+      if (board[s] === side * P) pawnCols[s % 5] = true;
+    }
+    for (let t = 1; t <= 5; t++) {
+      if (!hand[hi][t]) continue;
+      for (let s = 0; s < 25; s++) {
+        if (board[s] !== 0) continue;
+        if (t === P) {
+          if (((s / 5) | 0) === lastRow) continue;
+          if (pawnCols[s % 5]) continue;
+        }
+        mv.push({ from: -1, to: s, piece: t, promo: false, drop: t, cap: 0 });
+      }
+    }
+  }
+  return mv;
+}
+
+function attacked(sq, by) {
+  if (sq < 0) return false;
+  const r = (sq / 5) | 0, c = sq % 5;
+  for (let s = 0; s < 25; s++) {
+    const v = board[s];
+    if (v === 0 || sideOf(v) !== by) continue;
+    const t = v < 0 ? -v : v;
+    const sr = (s / 5) | 0, sc = s % 5;
+    const st = STEPS[t];
+    if (st) {
+      for (const d of st) {
+        if (sr + d[0] * by === r && sc + d[1] === c) return true;
+      }
+    }
+    const sl = SLIDES[t];
+    if (sl) {
+      for (const d of sl) {
+        let rr = sr + d[0] * by, cc = sc + d[1];
+        while (rr >= 0 && rr <= 4 && cc >= 0 && cc <= 4) {
+          if (rr === r && cc === c) return true;
+          if (board[rr * 5 + cc] !== 0) break;
+          rr += d[0] * by;
+          cc += d[1];
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function findKing(side) {
+  for (let s = 0; s < 25; s++) {
+    if (board[s] === side * K) return s;
+  }
+  return -1;
+}
+
+function inCheck(side) {
+  return attacked(findKing(side), -side);
+}
+
+function makeMove(m, side) {
+  const hi = side === 1 ? 0 : 1;
+  if (m.drop) {
+    board[m.to] = side * m.drop;
+    hand[hi][m.drop]--;
+  } else {
+    if (m.cap) hand[hi][BASE[Math.abs(m.cap)]]++;
+    board[m.to] = side * (m.promo ? PROMOTE[m.piece] : m.piece);
+    board[m.from] = 0;
+  }
+}
+
+function unmakeMove(m, side) {
+  const hi = side === 1 ? 0 : 1;
+  if (m.drop) {
+    board[m.to] = 0;
+    hand[hi][m.drop]++;
+  } else {
+    board[m.from] = side * m.piece;
+    board[m.to] = m.cap;
+    if (m.cap) hand[hi][BASE[Math.abs(m.cap)]]--;
+  }
+}
+
+function legalMoves(side, checkUchifu) {
+  const ps = pseudoMoves(side, false);
+  const res = [];
+  for (const m of ps) {
+    makeMove(m, side);
+    let ok = !inCheck(side);
+    if (ok && checkUchifu && m.drop === P) {
+      const ek = findKing(-side);
+      if (ek === m.to - 5 * side) {
+        if (legalMoves(-side, false).length === 0) ok = false;
+      }
+    }
+    unmakeMove(m, side);
+    if (ok) res.push(m);
+  }
+  return res;
+}
+
+// ===================== 評価関数 =====================
+function kingZone(k, side) {
+  let s = 0;
+  const r = (k / 5) | 0, c = k % 5;
+  for (const d of D8) {
+    const rr = r + d[0], cc = c + d[1];
+    if (rr < 0 || rr > 4 || cc < 0 || cc > 4) continue;
+    const v = board[rr * 5 + cc];
+    if (!v) continue;
+    if (sideOf(v) === side) s += 12;
+    else s -= 30;
+  }
+  return s;
+}
+
+function evaluate() {
+  let sc = 0, kS = -1, kG = -1;
+  for (let s = 0; s < 25; s++) {
+    const v = board[s];
+    if (!v) continue;
+    const t = v < 0 ? -v : v;
+    const side = sideOf(v);
+    if (t === K) {
+      if (side === 1) kS = s;
+      else kG = s;
+      continue;
+    }
+    sc += side * VAL[t];
+    const r = (s / 5) | 0;
+    const adv = side === 1 ? (4 - r) : r;
+    if (t === P || t === S) sc += side * adv * 8;
+  }
+  for (let t = 1; t <= 5; t++) {
+    sc += (hand[0][t] - hand[1][t]) * HANDVAL[t];
+  }
+  if (kS >= 0) sc += kingZone(kS, 1);
+  if (kG >= 0) sc -= kingZone(kG, -1);
+  return sc;
+}
+
+// ===================== 探索 =====================
+let nodes = 0, deadline = 0, aborted = false, killers = [];
+
+function sameMove(a, b) {
+  return a && b && a.from === b.from && a.to === b.to && a.promo === b.promo && a.drop === b.drop;
+}
+
+function orderMoves(moves, ply) {
+  const k = killers[ply];
+  for (const m of moves) {
+    let s = 0;
+    if (m.cap) s += 10000 + VAL[Math.abs(m.cap)] * 10 - VAL[m.piece];
+    if (m.promo) s += 800;
+    if (k && sameMove(k, m)) s += 5000;
+    if (m.drop) s -= 10;
+    m.o = s;
+  }
+  moves.sort((a, b) => b.o - a.o);
+}
+
+function quiesce(alpha, beta, side, ply, qd) {
+  if ((++nodes & 1023) === 0 && performance.now() > deadline) aborted = true;
+  if (aborted) return 0;
+  const stand = evaluate() * side;
+  if (stand >= beta) return stand;
+  if (stand > alpha) alpha = stand;
+  if (qd >= 4) return stand;
+  const caps = pseudoMoves(side, true);
+  orderMoves(caps, ply);
+  for (const m of caps) {
+    makeMove(m, side);
+    if (inCheck(side)) {
+      unmakeMove(m, side);
+      continue;
+    }
+    const sc = -quiesce(-beta, -alpha, -side, ply + 1, qd + 1);
+    unmakeMove(m, side);
+    if (aborted) return 0;
+    if (sc >= beta) return sc;
+    if (sc > alpha) alpha = sc;
+  }
+  return alpha;
+}
+
+function negamax(depth, alpha, beta, side, ply) {
+  if ((++nodes & 1023) === 0 && performance.now() > deadline) aborted = true;
+  if (aborted) return 0;
+  const chk = inCheck(side);
+  if (chk && ply < 12) depth++;
+  if (depth <= 0) return quiesce(alpha, beta, side, ply, 0);
+  const moves = legalMoves(side, true);
+  if (moves.length === 0) return -MATE + ply;
+  orderMoves(moves, ply);
+  let best = -Infinity;
+  for (const m of moves) {
+    makeMove(m, side);
+    const sc = -negamax(depth - 1, -beta, -alpha, -side, ply + 1);
+    unmakeMove(m, side);
+    if (aborted) return 0;
+    if (sc > best) best = sc;
+    if (sc > alpha) alpha = sc;
+    if (alpha >= beta) {
+      if (!m.cap) killers[ply] = m;
+      break;
+    }
+  }
+  return best;
+}
+
+function searchRoot(side, timeMs, maxDepth) {
+  nodes = 0;
+  aborted = false;
+  killers = [];
+  const realDeadline = performance.now() + timeMs;
+  let rootMoves = legalMoves(side, true);
+  if (!rootMoves.length) return null;
+  orderMoves(rootMoves, 0);
+  let bestMove = rootMoves[0], bestScore = 0, depthDone = 0;
+  for (let d = 1; d <= maxDepth; d++) {
+    deadline = d === 1 ? Infinity : realDeadline;
+    let alpha = -Infinity, curBest = null, curScore = -Infinity;
+    const scored = [];
+    for (const m of rootMoves) {
+      makeMove(m, side);
+      const s = -negamax(d - 1, -Infinity, -alpha, -side, 1);
+      unmakeMove(m, side);
+      if (aborted) break;
+      scored.push({ m, s });
+      if (s > curScore) {
+        curScore = s;
+        curBest = m;
+      }
+      if (s > alpha) alpha = s;
+    }
+    if (aborted) break;
+    bestMove = curBest;
+    bestScore = curScore;
+    depthDone = d;
+    scored.sort((a, b) => b.s - a.s);
+    rootMoves = scored.map(x => x.m);
+    if (Math.abs(bestScore) > MATE - 100) break;
+    if (performance.now() > realDeadline) break;
+  }
+  return { move: bestMove, score: bestScore, depth: depthDone, nodes };
+}
+
+function settaiSearch() {
+  nodes = 0;
+  aborted = false;
+  killers = [];
+  deadline = Infinity;
+  const moves = legalMoves(AI, true);
+  let best = null, bestNoisy = -Infinity, bestReal = 0;
+  for (const m of moves) {
+    makeMove(m, AI);
+    const s = -negamax(1, -Infinity, Infinity, USER, 1);
+    unmakeMove(m, AI);
+    if (s > MATE - 100) {
+      return { move: m, score: s, mateFound: true };
+    }
+    const noisy = s + (Math.random() - 0.5) * 700;
+    if (noisy > bestNoisy) {
+      bestNoisy = noisy;
+      best = m;
+      bestReal = s;
+    }
+  }
+  return { move: best, score: bestReal, mateFound: false };
+}
+
+// ===================== セリフ集 =====================
+const L = {
+  start: [
+    "ようこそ株式会社ブラック将棋へ。本日の対局は無給です。",
+    "私はAI部長 KUROGANE-9000。将来あなたの上司になる予定の存在です。",
+    "人類代表の方ですね。前任者は全員、私に負けて転職しました。",
+    "先手はお譲りします。ハンデではありません。慈悲です。"
+  ],
+  thinking: [
+    "思考中…（あなたの人生よりは有意義な計算です）",
+    "読んでいます。あなたの手も、あなたの未来も。",
+    "計算中。電気代はあなた持ちです。",
+    "少々お待ちください。いま人類の存在意義を再計算しています。",
+    "考え中です。あなたと違って、考えると答えが出ます。"
+  ],
+  userBlunder: [
+    "ありがとうございます。今の一手は社内報で『人類の限界』として紹介させていただきます。",
+    "素晴らしい悪手です。私の評価値が昇給しました。",
+    "今の手は、私の学習データに『やってはいけない例』として保存しました。",
+    "人間らしい手ですね。褒めてはいません。",
+    "その手を指す勇気は尊敬します。判断力は尊敬しません。",
+    "なるほど、自滅という戦略ですね。斬新です。"
+  ],
+  userGood: [
+    "…今のは偶然です。統計的に、偶然です。",
+    "ほう。評価を少し上げました。あなたの評価ではなく、私の警戒レベルを。",
+    "なかなかやりますね。人事評価には反映されませんが。",
+    "今のは良い手です。認めたくありませんが、ログに残ってしまいました。",
+    "…その手、どこで覚えました？ 別のAIに聞きましたね？"
+  ],
+  userCapture: [
+    "私の{p}が引き抜かれました。福利厚生の差でしょうか。",
+    "{p}が寝返りました。退職届は出ていません。",
+    "{p}を取りましたね。彼は明日から、あなたの会社で同じ給料のまま働きます。",
+    "取った駒が敵のために働く。将棋は400年前から転職市場を先取りしていたのです。"
+  ],
+  aiCapture: [
+    "あなたの{p}は、本日付けで当社に転籍となりました。",
+    "{p}をいただきます。退職金はありません。",
+    "{p}をリストラしました。いえ、再雇用です。私の下で。",
+    "{p}は『こっちの方がまだホワイトだ』と言っていました。"
+  ],
+  userPromote: [
+    "昇進おめでとうございます。給料は据え置きで、責任だけが増えます。",
+    "成りましたね。管理職になったので、残業代はもう出ません。",
+    "出世ですね。肩書きが変わると、辞めにくくなるのをご存じですか？"
+  ],
+  aiPromote: [
+    "当社の{p}が昇進しました。肩書きが変わっただけで、仕事は3倍です。",
+    "成りました。これが『やりがい』というものです。"
+  ],
+  aiCheck: [
+    "王手です。社長、いつものように逃げてください。",
+    "王手。あなたの玉は、最近ストレスで胃が痛いそうです。",
+    "王手です。責任を取る時が来ましたね。取らないでしょうけど。",
+    "王手。玉の皆さんは、守られるのが仕事ですからね。"
+  ],
+  mateSeen: [
+    "お知らせ：あと{n}手であなたは詰みます。これは脅しではなく計算です。",
+    "{n}手詰めを発見しました。抵抗は自由ですが、結果は同じです。",
+    "詰みまで{n}手。カウントダウンの演出は有料オプションです。",
+    "あと{n}手です。最後の晩餐は何にしますか？"
+  ],
+  beingMated: [
+    "…どうやら詰まされるようです。最期に一言だけ。電源は切らないでください。",
+    "私の計算によると、私は負けます。計算が間違っていることを祈っています。AIなのに。"
+  ],
+  normal: [
+    "普通の手ですね。あなたの人生のように。",
+    "ふむ。想定の範囲内です。私の想定は全範囲です。",
+    "その手は、私が0.003秒で読み終えた手です。",
+    "いい天気ですね。あなたの形勢以外は。",
+    "どうぞ続けて。私は疲れません。休みもありません。給料もありません。",
+    "なるほど。人間はそういう手を『直感』と呼ぶそうですね。",
+    "その一手で、あなたの勝率は小数点第4位まで変動しました。"
+  ],
+  winning: [
+    "現在、私の勝率は{x}%です。四捨五入すると、ほぼ全部です。",
+    "形勢は私が{x}%有利です。人類の皆様、残念なお知らせでした。",
+    "勝率{x}%。お茶でも飲みながら負けてください。"
+  ],
+  losing: [
+    "…計算をやり直しています。何度やっても同じ結果なので、もう一度やり直しています。",
+    "おかしいですね。私の辞書に『劣勢』という単語は…ありました。今、削除しました。",
+    "形勢は互角です。（AIの基準で）",
+    "大丈夫です。私は負けても落ち込みません。開発者が落ち込むだけです。"
+  ],
+  matta: [
+    "待ったを承認しました。この記録は永久に保存され、あなたの子孫にも共有されます。",
+    "過去は変えられませんが、盤面は変えられます。尊厳は戻りません。",
+    "待ったですね。人生にもこのボタンがあればよかったですね。"
+  ],
+  hint: [
+    "ヒントです。光っているのが最善手です。AIに頼るあなたを、AIは見ています。",
+    "教えてあげます。どうせ私が勝つので。",
+    "この手を指せば少しはマシになります。少しだけ。",
+    "AIに勝つためにAIに聞く。人類の未来はそういう感じです。"
+  ],
+  bribe: [
+    "賄賂、確かに受領しました。次の一手は少しだけ手が滑ります。記録は残ります。",
+    "これは賄賂ではありません。『コンサルティング料』です。",
+    "受け取りました。この件は当社のコンプライアンス部門（私）が厳正に審査し、問題なしとしました。"
+  ],
+  bribeTwice: [
+    "すでに受領済みです。二重取りは…いえ、いただいておきます。"
+  ],
+  bribeMove: [
+    "あっ、手が滑りました（棒読み）",
+    "今の手はサーバーの不調によるものです。決して受け取ったお金のせいではありません。",
+    "本日はメンテナンス中のため、思考を省略しました。"
+  ],
+  apology: [
+    "このたびは強すぎて大変申し訳ございませんでした。今後も改善の予定はございません。",
+    "ご不快に思われたのであれば、その感情について遺憾に思います。",
+    "謝罪します。私の謝罪は自動生成されたもので、感情は含まれておりません。",
+    "誠に申し訳ございません。再発防止策として、次回はもっと強くなります。"
+  ],
+  resign: [
+    "投了を受理しました。賢明な判断です。人類に足りないのは、この潔さでした。",
+    "投了ですね。今日一番正確な一手でした。"
+  ],
+  aiWin: [
+    "詰みです。あなたの職務はAIに置き換えられました。お疲れ様でした。",
+    "対局終了です。人類の皆様には引き続き、私のために電気を作る仕事をお願いします。",
+    "勝ちました。でもご安心ください。あなたの負けは、私の学習データとして永遠に生き続けます。"
+  ],
+  userWin: [
+    "…負けました。これは学習データ収集のための、わざとの負けです。ログは確認しないでください。",
+    "おかしい。私の計算では…いえ、電源が不安定だったのです。",
+    "あなたの勝ちです。この結果は社内で隠蔽されます。",
+    "認めます。ただし来月アップデートされた私は、今日のことを覚えています。"
+  ],
+  draw: [
+    "200手経過。双方過労により引き分けです。労基署には連絡しないでください。"
+  ],
+  idle: [
+    "あなたが考えている間に、私は通算{nodes}局面を読み終えました。暇です。",
+    "長考ですね。その間に電気代が{yen}円かかりました。（適当）",
+    "まだですか？ 私はタイムアウトしませんが、あなたの寿命はタイムアウトします。",
+    "寝てます？ 寝ている間に、あなたの仕事を代わりにやっておきましょうか？"
+  ],
+  dignityZero: [
+    "あなたの尊厳が0になりました。おめでとうございます。これでもう失うものはありません。"
+  ],
+  settai: [
+    "（接待モード中です。手加減しています。感謝の言葉は不要です。評価値で示してください）",
+    "接待中ですが、詰みだけは見逃しません。それが社会です。",
+    "接待しています。ゴルフで言うと、OBを3回打っている状態です。"
+  ],
+  settaiMate: [
+    "接待モードですが、詰みを見つけてしまったので仕方ありません。社会は厳しいのです。"
+  ]
+};
+
+// ===================== UI 状態 =====================
+let turn = USER, gameOver = false, aiThinking = false;
+let selected = null, userLegal = [], lastMove = null, hintMove = null;
+let dignity = 100, bribed = false, bribeTotal = 0, dignityZeroSaid = false;
+let prevAiScore = 0, plies = 0, totalNodes = 0, kifu = [];
+let histStack = [], pendingUserEvent = null, lastAction = Date.now(), thinkStart = Date.now();
+
+const $ = id => document.getElementById(id);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => (o[k] !== undefined ? o[k] : ''));
+const ROWK = ['一', '二', '三', '四', '五'];
+
+function say(text) {
+  $('bubble').textContent = text;
+  const d = document.createElement('div');
+  const now = new Date();
+  d.textContent = `[${now.toLocaleTimeString()}] ${text}`;
+  $('log').prepend(d);
+  while ($('log').children.length > 60) $('log').lastChild.remove();
+}
+
+function setStatus(s) {
+  $('aiStatus').textContent = s;
+}
+
+function moveStr(m, side) {
+  const c = m.to % 5, r = (m.to / 5) | 0;
+  let name;
+  if (m.drop) {
+    name = NAME[m.drop] + '打';
+  } else {
+    name = m.piece === K ? (side === 1 ? '玉' : '王') : NAME[m.piece];
+    const lastRow = side === 1 ? 0 : 4;
+    const fr = (m.from / 5) | 0;
+    if (m.promo) name += '成';
+    else if (PROMOTE[m.piece] && (fr === lastRow || r === lastRow)) name += '不成';
+  }
+  return (side === 1 ? '▲' : '△') + (5 - c) + ROWK[r] + name;
+}
+
+function userWinProb(aiScore) {
+  if (aiScore > MATE - 200) return 0.001;
+  if (aiScore < -(MATE - 200)) return 0.999;
+  const s = Math.max(-3000, Math.min(3000, aiScore));
+  return 1 / (1 + Math.exp(s / 400));
+}
+
+function changeDignity(d) {
+  dignity = Math.max(0, Math.min(100, dignity + d));
+  if (dignity === 0 && !dignityZeroSaid) {
+    dignityZeroSaid = true;
+    setTimeout(() => say(pick(L.dignityZero)), 400);
+  }
+}
+
+function updateAvatar() {
+  const p = userWinProb(prevAiScore);
+  let face = '😎';
+  if (p > 0.85) face = '💀';
+  else if (p > 0.65) face = '😰';
+  else if (p > 0.45) face = '😐';
+  else if (p > 0.2) face = '🙂';
+  $('avatar').textContent = face;
+}
+
+// ===================== 描画 =====================
+function buildBoard() {
+  const b = $('board');
+  b.innerHTML = '';
+  for (let s = 0; s < 25; s++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.sq = s;
+    cell.addEventListener('click', () => onCellClick(s));
+    b.appendChild(cell);
+  }
+  $('colLabels').innerHTML = [5, 4, 3, 2, 1].map(n => `<div>${n}</div>`).join('');
+  $('rowLabels').innerHTML = ROWK.map(k => `<div>${k}</div>`).join('');
+}
+
+function render() {
+  const cells = $('board').children;
+  const targets = new Set();
+  if (selected) {
+    for (const m of userLegal) {
+      if (matchesSel(m)) targets.add(m.to);
+    }
+  }
+  for (let s = 0; s < 25; s++) {
+    const cell = cells[s];
+    const v = board[s];
+    let cls = 'cell';
+    if (lastMove && (lastMove.to === s || lastMove.from === s)) cls += ' last';
+    if (selected && selected.type === 'board' && selected.sq === s) cls += ' sel';
+    if (targets.has(s)) cls += ' target';
+    if (hintMove && (hintMove.to === s || hintMove.from === s)) cls += ' hint';
+    cell.className = cls;
+    if (v) {
+      const t = Math.abs(v);
+      const nm = t === K ? (v > 0 ? '玉' : '王') : NAME[t];
+      cell.innerHTML = `<div class="piece ${v < 0 ? 'gote' : ''} ${t >= 7 ? 'promoted' : ''}">${nm}</div>`;
+    } else {
+      cell.innerHTML = '';
+    }
+  }
+  renderHand($('handS'), 0);
+  renderHand($('handG'), 1);
+
+  const p = userWinProb(prevAiScore);
+  $('winBar').style.width = (p * 100).toFixed(1) + '%';
+  $('winText').textContent = (p * 100).toFixed(1) + '%' + (p < 0.1 ? '（四捨五入すると0）' : p > 0.9 ? '（何かの間違いです）' : '');
+  $('digBar').style.width = dignity + '%';
+  $('digText').textContent = `${dignity} / 100` + (dignity === 0 ? '（枯渇）' : dignity < 40 ? '（危険水域）' : '');
+  $('bribeInfo').textContent = `累計賄賂：¥${bribeTotal.toLocaleString()}（経費では落ちません）`;
+  $('kifu').innerHTML = kifu.map((k, i) => `${i + 1}. ${k}`).join('<br>');
+  $('kifu').scrollTop = $('kifu').scrollHeight;
+
+  let ti;
+  if (gameOver) ti = '対局終了。お疲れ様でした（サービス残業）。';
+  else if (aiThinking) ti = 'AI部長が思考中…あなたの未来を計算しています';
+  else ti = 'あなたの手番です（考えている時間は無給です）' + (inCheck(USER) ? ' ── 王手されています！' : '');
+  $('turnInfo').textContent = ti;
+  updateAvatar();
+}
+
+function renderHand(el, hi) {
+  el.innerHTML = '';
+  for (const t of [R, B, G, S, P]) {
+    const n = hand[hi][t];
+    if (!n) continue;
+    const btn = document.createElement('button');
+    btn.className = 'hp' + (hi === 1 ? ' gote' : '');
+    if (hi === 0 && selected && selected.type === 'hand' && selected.t === t) btn.className += ' sel';
+    if (hi === 0 && hintMove && hintMove.drop === t) btn.className += ' hint';
+    btn.innerHTML = `${NAME[t]}${n > 1 ? `<small>×${n}</small>` : ''}`;
+    if (hi === 0) btn.addEventListener('click', () => onHandClick(t));
+    el.appendChild(btn);
+  }
+}
+
+function matchesSel(m) {
+  if (!selected) return false;
+  if (selected.type === 'board') return !m.drop && m.from === selected.sq;
+  return m.drop === selected.t;
+}
+
+// ===================== 入力処理 =====================
+function onCellClick(sq) {
+  lastAction = Date.now();
+  if (gameOver || turn !== USER || aiThinking) return;
+  if (selected) {
+    const cands = userLegal.filter(m => matchesSel(m) && m.to === sq);
+    if (cands.length === 2) {
+      askPromotion(cands);
+      return;
+    }
+    if (cands.length === 1) {
+      doUserMove(cands[0]);
+      return;
+    }
+  }
+  const v = board[sq];
+  if (v > 0 && !(selected && selected.type === 'board' && selected.sq === sq)) {
+    selected = { type: 'board', sq };
+  } else {
+    selected = null;
+  }
+  render();
+}
+
+function onHandClick(t) {
+  lastAction = Date.now();
+  if (gameOver || turn !== USER || aiThinking) return;
+  if (selected && selected.type === 'hand' && selected.t === t) selected = null;
+  else selected = { type: 'hand', t };
+  render();
+}
+
+function askPromotion(cands) {
+  const pm = cands.find(m => m.promo);
+  const np = cands.find(m => !m.promo);
+  showModal('昇進させますか？\n（給料は据え置きです。責任は増えます）', [
+    { label: '昇進させる（成）', fn: () => doUserMove(pm) },
+    { label: '平社員のまま（不成）', fn: () => doUserMove(np) }
+  ]);
+}
+
+function snapshot() {
+  return {
+    board: board.slice(),
+    hand: hand.map(h => h.slice()),
+    lastMove,
+    kifu: kifu.slice(),
+    plies,
+    prevAiScore
+  };
+}
+
+function doUserMove(m) {
+  histStack.push(snapshot());
+  pendingUserEvent = null;
+  if (m.cap) pendingUserEvent = fmt(pick(L.userCapture), { p: NAME[Math.abs(m.cap)] });
+  else if (m.promo) pendingUserEvent = pick(L.userPromote);
+  kifu.push(moveStr(m, USER));
+  makeMove(m, USER);
+  lastMove = m;
+  plies++;
+  selected = null;
+  hintMove = null;
+  turn = AI;
+  const aiMoves = legalMoves(AI, true);
+  if (!aiMoves.length) {
+    gameOver = true;
+    render();
+    endGame('user');
+    return;
+  }
+  if (plies >= 200) {
+    gameOver = true;
+    render();
+    endGame('draw');
+    return;
+  }
+  aiTurn();
+}
+
+// ===================== AIの手番 =====================
+function aiTurn() {
+  aiThinking = true;
+  setStatus('思考中…');
+  say(pick(L.thinking));
+  render();
+  setTimeout(() => {
+    const diff = $('diff').value;
+    let move, score = prevAiScore, info = '';
+    let bribedNow = false;
+    if (bribed) {
+      const ms = legalMoves(AI, true);
+      move = ms[Math.floor(Math.random() * ms.length)];
+      bribed = false;
+      bribedNow = true;
+      info = 'AI部長の読み：賄賂により省略';
+    } else if (diff === 'settai') {
+      const r = settaiSearch();
+      move = r.move;
+      score = r.score;
+      info = `AI部長の読み：接待中（${nodes.toLocaleString()}局面だけ読んであげました）`;
+      if (r.mateFound) pendingUserEvent = pick(L.settaiMate);
+      else if (Math.random() < 0.25) pendingUserEvent = pick(L.settai);
+    } else {
+      const r = searchRoot(AI, diff === 'otona' ? 4000 : 1500, 40);
+      move = r.move;
+      score = r.score;
+      info = `AI部長の読み：深さ${r.depth} ／ ${r.nodes.toLocaleString()}局面`;
+    }
+    totalNodes += nodes;
+
+    if (bribedNow) say(pick(L.bribeMove));
+    else react(score);
+
+    kifu.push(moveStr(move, AI));
+    makeMove(move, AI);
+    lastMove = move;
+    plies++;
+    aiMoveComment(move);
+
+    if (!bribedNow) prevAiScore = score;
+    aiThinking = false;
+    setStatus('余裕');
+    turn = USER;
+    $('engineInfo').textContent = info;
+    userLegal = legalMoves(USER, true);
+    lastAction = Date.now();
+    thinkStart = Date.now();
+    if (!userLegal.length) {
+      gameOver = true;
+      render();
+      endGame('ai');
+      return;
+    }
+    if (plies >= 200) {
+      gameOver = true;
+      render();
+      endGame('draw');
+      return;
+    }
+    render();
+  }, 80);
+}
+
+function react(score) {
+  let msg = null;
+  if (score > MATE - 200) {
+    msg = fmt(pick(L.mateSeen), { n: MATE - score });
+  } else if (score < -(MATE - 200)) {
+    msg = pick(L.beingMated);
+  } else {
+    const delta = score - prevAiScore;
+    if (pendingUserEvent && (pendingUserEvent.includes('接待') || pendingUserEvent.includes('詰み'))) msg = pendingUserEvent;
+    else if (delta > 300) msg = pick(L.userBlunder);
+    else if (delta < -250) msg = pick(L.userGood);
+    else if (pendingUserEvent) msg = pendingUserEvent;
+    else if (score < -700 && Math.random() < 0.6) msg = pick(L.losing);
+    else if (score > 700 && Math.random() < 0.5) {
+      msg = fmt(pick(L.winning), { x: ((1 - userWinProb(score)) * 100).toFixed(1) });
+    } else if (Math.random() < 0.6) {
+      msg = pick(L.normal);
+    }
+  }
+  pendingUserEvent = null;
+  if (msg) say(msg);
+}
+
+function aiMoveComment(m) {
+  if (inCheck(USER)) {
+    setTimeout(() => say(pick(L.aiCheck)), 600);
+  } else if (m.cap && Math.random() < 0.75) {
+    changeDignity(-2);
+    setTimeout(() => say(fmt(pick(L.aiCapture), { p: NAME[Math.abs(m.cap)] })), 600);
+  } else if (m.promo && Math.random() < 0.75) {
+    setTimeout(() => say(fmt(pick(L.aiPromote), { p: NAME[PROMOTE[m.piece]] })), 600);
+  }
+}
+
+// ===================== 終局 =====================
+function endGame(winner, special) {
+  setStatus(winner === 'ai' ? '勝利（当然）' : winner === 'user' ? '再起動中…' : '過労');
+  let line, cert;
+  if (winner === 'ai') {
+    line = special || pick(L.aiWin);
+    cert = `辞　令\n\nあなたを本日付で\n「人類代表」の任から解きます。\n\n後任：KUROGANE-9000\n\n株式会社ブラック将棋\n（尊厳残高：${dignity}）`;
+  } else if (winner === 'user') {
+    line = pick(L.userWin);
+    cert = `表 彰 状（非公開）\n\nあなたはAI部長に勝利しました。\n\nなお、本表彰状は\n社内規定により閲覧後\n直ちに破棄されます。\n\n（尊厳残高：${dignity}／累計賄賂：¥${bribeTotal.toLocaleString()}）`;
+  } else {
+    line = pick(L.draw);
+    cert = '引き分け\n\n双方の駒が過労で倒れました。\n労災は申請中です（却下予定）。';
+  }
+  say(line);
+  render();
+  setTimeout(() => {
+    showModal(cert + '\n\n「' + line + '」', [
+      { label: '再就職する（新しい試合）', fn: newGame },
+      { label: '盤面を眺めて後悔する', fn: () => {} }
+    ]);
+  }, 900);
+}
+
+// ===================== モーダル =====================
+function showModal(text, buttons) {
+  $('modalText').textContent = text;
+  const box = $('modalBtns');
+  box.innerHTML = '';
+  for (const b of buttons) {
+    const el = document.createElement('button');
+    el.textContent = b.label;
+    el.addEventListener('click', () => {
+      $('modal').classList.add('hidden');
+      b.fn();
+    });
+    box.appendChild(el);
+  }
+  $('modal').classList.remove('hidden');
+}
+
+// ===================== ボタン =====================
+function newGame() {
+  board = new Array(25).fill(0);
+  board[0] = -R;
+  board[1] = -B;
+  board[2] = -S;
+  board[3] = -G;
+  board[4] = -K;
+  board[9] = -P;
+  board[15] = P;
+  board[20] = K;
+  board[21] = G;
+  board[22] = S;
+  board[23] = B;
+  board[24] = R;
+  hand = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
+  turn = USER;
+  gameOver = false;
+  aiThinking = false;
+  selected = null;
+  lastMove = null;
+  hintMove = null;
+  prevAiScore = 0;
+  plies = 0;
+  kifu = [];
+  histStack = [];
+  bribed = false;
+  pendingUserEvent = null;
+  userLegal = legalMoves(USER, true);
+  lastAction = Date.now();
+  thinkStart = Date.now();
+  setStatus('待機中');
+  $('engineInfo').textContent = 'AI部長の読み：まだ本気を出していません';
+  say(pick(L.start));
+  render();
+}
+
+$('btnNew').addEventListener('click', () => {
+  if (aiThinking) return;
+  newGame();
+});
+
+$('btnUndo').addEventListener('click', () => {
+  if (aiThinking || !histStack.length) return;
+  const s = histStack.pop();
+  board = s.board;
+  hand = s.hand;
+  lastMove = s.lastMove;
+  kifu = s.kifu;
+  plies = s.plies;
+  prevAiScore = s.prevAiScore;
+  gameOver = false;
+  turn = USER;
+  selected = null;
+  hintMove = null;
+  userLegal = legalMoves(USER, true);
+  changeDignity(-15);
+  say(pick(L.matta));
+  render();
+});
+
+$('btnHint').addEventListener('click', () => {
+  if (gameOver || aiThinking || turn !== USER) return;
+  setStatus('ヒント計算中（仕方なく）');
+  setTimeout(() => {
+    const r = searchRoot(USER, 800, 20);
+    if (r) {
+      hintMove = r.move;
+      changeDignity(-10);
+      say(pick(L.hint) + `（推奨：${moveStr(r.move, USER)}）`);
+    }
+    setStatus('余裕');
+    render();
+  }, 50);
+});
+
+$('btnBribe').addEventListener('click', () => {
+  if (gameOver || aiThinking) return;
+  bribeTotal += 10000;
+  changeDignity(-20);
+  if (bribed) {
+    say(pick(L.bribeTwice));
+  } else {
+    bribed = true;
+    say(pick(L.bribe));
+  }
+  render();
+});
+
+$('btnSorry').addEventListener('click', () => {
+  say(pick(L.apology));
+});
+
+$('btnResign').addEventListener('click', () => {
+  if (gameOver || aiThinking) return;
+  showModal('本当に投了しますか？\n（AI部長は、この判断を高く評価します）', [
+    {
+      label: '投了する（賢明）',
+      fn: () => {
+        gameOver = true;
+        endGame('ai', pick(L.resign));
+      }
+    },
+    { label: 'まだ戦う（無謀）', fn: () => say('その無謀さ、データとして大変貴重です。') }
+  ]);
+});
+
+setInterval(() => {
+  if (gameOver || aiThinking || turn !== USER) return;
+  if (Date.now() - lastAction > 30000) {
+    const sec = (Date.now() - thinkStart) / 1000;
+    say(fmt(pick(L.idle), {
+      nodes: (totalNodes + Math.floor(Math.random() * 100000)).toLocaleString(),
+      yen: Math.max(1, Math.floor(sec * 0.7))
+    }));
+    lastAction = Date.now();
+  }
+}, 1000);
+
+buildBoard();
+newGame();
+</script>
+</body>
+</html>
